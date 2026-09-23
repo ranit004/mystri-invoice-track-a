@@ -1,0 +1,30 @@
+name: ClearLedger Security & Test CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Development Security Dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run Python Compilation Check
+        run: python -m compileall -q app.py ledger
+      - name: Run Automated Test Suite
+        run: python -m unittest discover -s tests -v
+      - name: Run Ruff Linter
+        run: ruff check .
+      - name: Run Bandit Security Analysis
+        run: bandit -r ledger -q
+      - name: Run Pip Audit
+        run: pip-audit
+
