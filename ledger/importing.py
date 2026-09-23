@@ -16,7 +16,7 @@ MAX_FIELD_LEN = 256
 def _sanitize_filename(val):
     if not val or not isinstance(val, str):
         return None
-    name = Path(val).name
+    name = Path(val.replace('\\', '/')).name
     name = re.sub(r'[\x00-\x1f\x7f]', '', name).strip()
     if not name or name in ('.', '..'):
         return None
@@ -73,4 +73,3 @@ def import_csv(db, text, kind, filename=None):
         ''', (ts, kind, safe_filename, sha256_hash, result['imported'], result['skipped'], result['rejected'], err_summary))
 
     return result
-
