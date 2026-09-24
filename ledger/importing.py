@@ -16,8 +16,8 @@ MAX_FIELD_LEN = 256
 def _sanitize_filename(val):
     if not val or not isinstance(val, str):
         return None
-    name = Path(val.replace('\\', '/')).name
-    name = re.sub(r'[\x00-\x1f\x7f]', '', name).strip()
+    val = re.sub(r'[\x00-\x1f\x7f]', '', val).strip()
+    name = re.split(r'[/\\]', val)[-1].strip()
     if not name or name in ('.', '..'):
         return None
     return name[:64]
