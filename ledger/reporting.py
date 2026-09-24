@@ -2,7 +2,13 @@ import csv
 import io
 
 
-def invoices(db, status='all'):
+def _invoice_rows_with_paise(db, status='all'):
+    """Build invoice rows including the internal `_bal_paise` field.
+
+    Internal helper only: `_bal_paise` is exact-precision plumbing for
+    status/sum math and must never reach an HTTP response directly.
+    Public callers should go through `invoices()`, which strips it.
+    """
     if status not in ('all', 'open', 'paid'):
         raise ValueError('status must be all, open or paid')
     data = db.execute('''
@@ -30,8 +36,16 @@ def invoices(db, status='all'):
     return result
 
 
+def invoices(db, status='all'):
+    """Public invoice listing. Never exposes internal `_bal_paise`."""
+    rows = _invoice_rows_with_paise(db, status)
+    for r in rows:
+        r.pop('_bal_paise', None)
+    return rows
+
+
 def overview(db):
-    rows = invoices(db)
+    rows = _invoice_rows_with_paise(db)
     unmatched = [{
         'payment_id': r['payment_id'],
         'customer_id': r['customer_id'],
@@ -39,11 +53,11 @@ def overview(db):
         'amount': round(int(r['amount']) / 100.0, 2)
     } for r in db.execute('''SELECT payment_id, customer_id,
         invoice_number, amount FROM payments WHERE invoice_id IS NULL ORDER BY payment_id''')]
-    
+
     outstanding_paise = sum(r['_bal_paise'] for r in rows if r['_bal_paise'] > 0)
     for r in rows:
         r.pop('_bal_paise', None)
-        
+
     return {'invoices': rows, 'unmatched_payments': unmatched, 'summary': {
         'invoice_count': len(rows),
         'open_count': sum(r['status'] == 'open' for r in rows),
@@ -81,7 +95,3 @@ def get_import_audit(db):
         FROM import_audit ORDER BY id DESC
     ''').fetchall()
     return [dict(r) for r in rows]
-
-
-
-

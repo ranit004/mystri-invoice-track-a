@@ -98,6 +98,28 @@ class ReconciliationTests(unittest.TestCase):
         error_lines = [e['line'] for e in res['errors']]
         self.assertEqual(error_lines, [3, 4])
 
+    def test_invoices_endpoint_matches_overview_shape(self):
+        """reporting.invoices() must return the exact BUSINESS_RULES.md field set
+        (id, customer_id, customer_name, invoice_number, amount, due_date, paid,
+        balance, status) for every status filter, matching overview()'s invoice
+        rows. Internal helper fields such as `_bal_paise` must never leak through
+        the public GET /api/invoices response -- doing so makes that endpoint
+        disagree in shape with GET /api/overview, which strips it.
+        """
+        allowed_fields = {'id', 'customer_id', 'customer_name', 'invoice_number',
+                           'amount', 'due_date', 'paid', 'balance', 'status'}
+        overview_keys = set(reporting.overview(self.db)['invoices'][0].keys())
+        self.assertEqual(overview_keys, allowed_fields)
+
+        for status in ('all', 'open', 'paid'):
+            rows = reporting.invoices(self.db, status)
+            self.assertTrue(rows, f"expected at least one row for status={status}")
+            for row in rows:
+                self.assertEqual(
+                    set(row.keys()), allowed_fields,
+                    f"status={status} row leaked or is missing fields: {set(row.keys()) - allowed_fields}"
+                )
+
     def test_open_paid_status_filters(self):
         """invoices(status) filters open vs paid accurately."""
         all_inv = reporting.invoices(self.db, 'all')
@@ -459,7 +481,3 @@ class ReconciliationTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
-
-
-
