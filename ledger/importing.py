@@ -4,7 +4,6 @@ import io
 import json
 import datetime
 import re
-from pathlib import Path
 from .validation import HEADERS, normalize, classify_error
 from .storage import insert_invoice, insert_payment
 from .matching import find_invoice
